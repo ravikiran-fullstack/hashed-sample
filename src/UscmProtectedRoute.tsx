@@ -29,7 +29,7 @@ export const UscmProtectedRoute = ({children}:{children:ReactNode}) => {
   const paramHash = getQueryParam();
 
   // Compare the retrieved 'param' value with the saved hash
-  if (paramHash && savedHash.m45Hashes.includes(paramHash)) {
+  if (paramHash && savedHash.includes(paramHash)) {
     // Save the userHash in localStorage if the last saved time is more than 2 minutes ago
     // Check if the last saved time is more than 2 minutes ago
     const lastSavedTime = localStorage.getItem('lastSavedTime');
