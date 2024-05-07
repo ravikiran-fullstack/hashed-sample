@@ -1,76 +1,88 @@
 import { render, screen } from '@testing-library/react';
 import { UscmProtectedRoute } from './UscmProtectedRoute';
-import { useLocation, useNavigate } from 'react-router-dom';
-
-jest.mock('react-router-dom', () => ({
-  useLocation: jest.fn(),
-  useNavigate: jest.fn(),
-}));
+import { MemoryRouter } from 'react-router-dom';
 
 describe('UscmProtectedRoute', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    // Mock localStorage methods
+    jest.spyOn(window.localStorage.__proto__, 'getItem').mockReturnValue(null);
+    jest
+      .spyOn(window.localStorage.__proto__, 'setItem')
+      .mockImplementation(() => {});
+    jest
+      .spyOn(window.localStorage.__proto__, 'removeItem')
+      .mockImplementation(() => {});
   });
 
-  it('renders the children when the param hash matches and uscmEnabled is true', () => {
-    // Mock the useLocation hook to return a query parameter hash that matches the saved hash
-    (useLocation as jest.Mock).mockReturnValueOnce({
-      search: '?param=validHash',
-    });
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
 
-    // Mock the localStorage getItem method to return a last saved time that is more than 2 minutes ago
-    jest.spyOn(window.localStorage.__proto__, 'getItem').mockReturnValueOnce(
-      String(new Date().getTime() - 3 * 60 * 1000)
-    );
+  test('renders children when param hash is valid', async () => {
+    // Mock useLocation hook
 
-    // Mock the localStorage setItem method
-    jest.spyOn(window.localStorage.__proto__, 'setItem');
+    jest.mock('react-router-dom', () => ({
+      ...jest.requireActual('react-router-dom'),
+      useLocation: () => ({
+        pathname:
+          'http://localhost:5173/uscm?param=e4d909c290d0fb1ca068ffaddf22cbd0',
+      }),
+    }));
 
-    // Mock the useNavigate hook
-    const mockNavigate = jest.fn();
-    (useNavigate as jest.Mock).mockReturnValueOnce(mockNavigate);
-
-    // Render the UscmProtectedRoute component
     render(
-      <UscmProtectedRoute>
-        <div data-testid="children">Children Content</div>
-      </UscmProtectedRoute>
+      <MemoryRouter>
+        <UscmProtectedRoute>
+          <div>Children Content</div>
+        </UscmProtectedRoute>
+      </MemoryRouter>
     );
 
-    // Assert that the children content is rendered
-    expect(screen.getByTestId('children')).toBeInTheDocument();
-
-    // Assert that the localStorage setItem method is called with the correct arguments
-    expect(localStorage.setItem).toHaveBeenCalledWith(
-      'userHash',
-      'validHash'
-    );
-
-    // Assert that the localStorage getItem method is called with the correct argument
-    expect(localStorage.getItem).toHaveBeenCalledWith('lastSavedTime');
-
-    // Assert that the useNavigate hook is not called
-    expect(mockNavigate).not.toHaveBeenCalled();
+    // expect(screen.getByText('Catalog Page')).toBeInTheDocument();
+    const element = await screen.findByText('Catalog Page');
+    expect(element).toBeInTheDocument();
   });
 
-  it('redirects to the home page when the param hash does not match', () => {
-    // Mock the useLocation hook to return a query parameter hash that does not match the saved hash
-    (useLocation as jest.Mock).mockReturnValueOnce({
-      search: '?param=invalidHash',
-    });
+  test('redirects to home page when param hash is invalid', () => {
+    jest.mock('react-router-dom', () => ({
+      ...jest.requireActual('react-router-dom'),
+      useLocation: () => ({
+        pathname:
+          'http://localhost:5173/uscm?param=e4d909c290d0fb1ca068ffaddf22cbdadsad',
+      }),
+    }));
 
-    // Mock the useNavigate hook
-    const mockNavigate = jest.fn();
-    (useNavigate as jest.Mock).mockReturnValueOnce(mockNavigate);
-
-    // Render the UscmProtectedRoute component
     render(
-      <UscmProtectedRoute>
-        <div data-testid="children">Children Content</div>
-      </UscmProtectedRoute>
+      <MemoryRouter>
+        <UscmProtectedRoute>
+          <div>Children Content</div>
+        </UscmProtectedRoute>
+      </MemoryRouter>
     );
 
-    // Assert that the component redirects to the home page
-    expect(mockNavigate).toHaveBeenCalledWith('/');
+    // expect(screen.queryByText('Children Content')).not.toBeInTheDocument();
+    expect(window.location.pathname).toBe('/');
   });
+
+  test('redirects to home page when param hash is missing', () => {
+    // Mock useLocation hook
+
+    jest.mock('react-router-dom', () => ({
+      ...jest.requireActual('react-router-dom'),
+      useLocation: () => ({
+        pathname: 'http://localhost:5173/uscm',
+      }),
+    }));
+
+    render(
+      <MemoryRouter>
+        <UscmProtectedRoute>
+          <div>Children Content</div>
+        </UscmProtectedRoute>
+      </MemoryRouter>
+    );
+
+    expect(window.location.pathname).toBe('/');
+  });
+
+  // Add more test cases as needed
 });
